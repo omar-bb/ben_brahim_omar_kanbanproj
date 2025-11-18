@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <p id="p1" draggable="true">This element is draggable.</p> 
+
+    <script>
+        function dragstartHandler(ev) {
+            ev.dataTransfer.setData("text/plain", ev.target.innerText);
+            ev.dataTransfer.setData("text/html", ev.target.outerHTML);
+            ev.dataTransfer.setData(
+                "text/uri-list",
+                ev.target.ownerDocument.location.href,
+            );
+        }
+
+        const p1 = document.getElementById("p1");
+        p1.addEventListener("dragstart", dragstartHandler);
+        const target = document.getElementById("target");
+
+        target.addEventListener("dragover", (ev) => {
+            ev.preventDefault();
+        });
+
+        target.addEventListener("drop", (ev) => {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text/plain");
+            ev.target.append(data);
+        });
+    </script>
+</body>
+</html>
