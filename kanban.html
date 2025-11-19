@@ -19,10 +19,19 @@
             padding: 0 10px;
         }
 
-        .row { 
-            margin: 0 -5px;
-            padding: 5px;
+        .row {
+            min-height: 50px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
         }
+
+        .row.placeholder {
+            background-color: #eee; 
+            border: 2px dashed #aaa;
+            transition: background-color 0.2s, border 0.2s;
+        } 
 
         .row:after {
             content: "";
@@ -76,53 +85,115 @@
     </div>
 
     <script>
-        // class Card {
-        //     constructor(elementId, text) {
-        //         this.element = document.getElementById(elementId);
-        //         if (!this.element) {
-        //             console.error(`Element with ID '${elementId}' not found.`);
-        //         }
+        // function initBoard() {
+        //     if (!localStorage.getItem("myBoard")) {
+        //         const data = {
+        //             cards: {},
+        //             tables: {}
+        //         };
+        //         localStorage.setItem("myBoard", JSON.stringify(data));
+        //         localStorage.setItem("lastCardId", "0");
+        //         localStorage.setItem("lastTableId", "0");
         //     }
         // }
 
-        function dragstartHandler(ev) {
-            ev.dataTransfer.setData("text/plain", ev.target.innerText);
-            ev.dataTransfer.setData("text/html", ev.target.outerHTML);
-            ev.dataTransfer.setData(
-                "text/uri-list",
-                ev.target.ownerDocument.location.href,
-            );
+        // function createCard(task, due) {
+        //     const board = JSON.parse(localStorage.getItem("myBoard"));
+        //     let lastCardId = parseInt(localStorage.getItem("lastCardId"));
+
+        //     const newId = lastCardId + 1;
+
+        //     board.cards[newId] = {
+        //         task: task,
+        //         due: due
+        //     }
+
+        //     localStorage.setItem("myBoard", JSON.stringify(board));
+        //     localStorage.setItem("lastCardId", newId);
+
+        //     return newId;
+        // }
+
+        // const data = {
+        //     cards: {
+        //         "0": {
+        //             task: "lire le cours d'HTML",
+        //             due: "2025-11-20"
+        //         },
+        //         "1": {
+        //             task: "faire les exercices CSS",
+        //             due: "2025-11-22"
+        //         },
+        //         "2": {
+        //             task: "réviser JavaScript (DOM)",
+        //             due: "2025-11-25"
+        //         },
+        //         "3": {
+        //             task: "créer un mini-projet HTML/CSS",
+        //             due: "2025-11-28"
+        //         }
+        //     },
+        //     tables: {
+        //         "0": {
+        //             name: "TO-DO",
+        //             cards: ["0", "1"]
+        //         },
+        //         "1": {
+        //             name: "IN-PROGRESS",
+        //             cards: ["2"]
+        //         },
+        //         "2": {
+        //             name: "DONE",
+        //             cards: ["3"]
+        //         }
+        //     }
+        // };
+
+        // const json = JSON.stringify(data);
+
+        // localStorage.setItem("myBoard", json);
+
+
+        class Card {
+            constructor(elementId, text) {
+                this.element = document.getElementById(elementId);
+                if (!this.element) {
+                    console.error(`Element with ID '${elementId}' not found.`);
+                }
+            }
         }
 
-        const cards = document.getElementsByClassName("card");
-        Array.from(cards).forEach((card) => {
-            card.addEventListener("dragstart", dragstartHandler);
+        let draggedEl = null;
+
+        document.addEventListener("dragstart", (ev) => {
+            if (ev.target.classList.contains("card")) {
+                draggedEl = ev.target;
+            }
         });
 
-        const targets = document.getElementsByClassName("row");
-        Array.from(targets).forEach((target) => {
-            target.addEventListener("dragover", (ev) => {
-                ev.preventDefault();
-            });
+        document.addEventListener("dragover", (ev) => {
+            const row = ev.target.closest(".row");
+            if (row) {
+                ev.preventDefault(); // allow drop
+                row.classList.add("placeholder"); // show grey area
+            }
+        });
 
-            target.addEventListener("drop", (ev) => {
-                ev.preventDefault();
-                data = ev.dataTransfer.getData("text/plain");
-                console.log(data);
-                // Card creation 
-                const card = document.createElement("div");
-                card.classList.add("column");
-                card.innerHTML = `
-                    <div class="card" draggable="true">
-                        <p>${data}</p>
-                    </div>
-                `;
-                // add the event listeners to the cards
-                card.addEventListener("dragstart", dragstartHandler);
+        document.addEventListener("dragleave", (ev) => {
+            const row = ev.target.closest(".row");
+            if (row) {
+                row.classList.remove("placeholder"); // remove grey when leaving
+            }
+        });
 
-                target.append(card);
-            });
-        })
+        document.addEventListener("drop", (ev) => {
+            const row = ev.target.closest(".row");
+            if (row) {
+                ev.preventDefault();
+                row.classList.remove("placeholder"); // remove grey
+                row.append(draggedEl.parentNode);    // move card
+            }
+        });
     </script>
 </body>
 </html>
