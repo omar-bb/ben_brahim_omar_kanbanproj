@@ -170,9 +170,31 @@
             const newDue = prompt("Modifier la date d'échéance (AAAA-MM-JJ) :", card.due);
             if (newDue === null) return; // Annulé
 
-        document.addEventListener("dragstart", (ev) => {
-            if (ev.target.classList.contains("card")) {
-                draggedEl = ev.target;
+            // Validation de la date
+            if (newDue !== "" && !isValidDate(newDue)) {
+                alert("Format de date invalide. Veuillez utiliser AAAA-MM-JJ.");
+                return;
+            }
+
+            if (newTask || newDue) {
+                boardData.cards[cardId] = {
+                    ...card,
+                    task: newTask || card.task,
+                    due: newDue || card.due
+                };
+                saveBoard();
+                renderBoard(boardData);
+            }
+        }
+
+        // Changer la couleur d'une tâche
+        function changeTaskColor(cardId, newColor) {
+            if (boardData.cards[cardId]) {
+                boardData.cards[cardId].color = newColor;
+                saveBoard();
+                // Pas besoin de tout re-rendre, on peut juste appliquer le style si on veut optimiser,
+                // mais renderBoard est plus sûr pour la cohérence.
+                renderBoard(boardData);
             }
         });
 
