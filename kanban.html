@@ -410,10 +410,18 @@
                 if (event.clientY >= rect.top && event.clientY <= rect.bottom) return;
             }
 
-        document.addEventListener("dragleave", (ev) => {
-            const row = ev.target.closest(".row");
-            if (row) {
-                row.classList.remove("placeholder"); // remove grey when leaving
+            const children = Array.from(tasks.children).filter(child => child !== existingPlaceholder && child !== draggedTask);
+            let inserted = false;
+            for (const task of children) {
+                const rect = task.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                // Si la souris est au-dessus du milieu de l'élément, on insère avant
+                if (event.clientY < midY) {
+                    if (existingPlaceholder) existingPlaceholder.remove();
+                    tasks.insertBefore(existingPlaceholder ?? makePlaceholder(draggedTask), task);
+                    inserted = true;
+                    break;
+                }
             }
         });
 
