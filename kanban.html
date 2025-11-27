@@ -428,6 +428,112 @@
                 if (existingPlaceholder) existingPlaceholder.remove();
                 tasks.appendChild(existingPlaceholder ?? makePlaceholder(draggedTask));
             }
+        }
+
+        // Initialise le drag & drop des tâches
+        function initTaskDragAndDrop() {
+            const columns = document.querySelectorAll(".task-column");
+            const tasks = document.querySelectorAll(".task");
+
+            tasks.forEach((task) => {
+                task.addEventListener("dragstart", (event) => {
+                    event.stopPropagation(); // Empêche de drag la colonne en même temps
+                    task.id = "dragged-task";
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("task", "");
+                    // Cache visuellement l'élément original
+                    setTimeout(() => task.style.display = "none", 0);
+                });
+                task.addEventListener("dragend", (event) => {
+                    task.removeAttribute("id");
+                    task.style.display = "block";
+                });
+            });
+
+            columns.forEach((column) => {
+                column.addEventListener("dragover", moveTaskPlaceholder);
+                column.addEventListener("dragleave", (event) => {
+                    if (column.contains(event.relatedTarget)) return;
+                    const placeholder = column.querySelector(".placeholder");
+                    if (placeholder) placeholder.remove();
+                });
+                column.addEventListener("drop", (event) => {
+                    if (!event.dataTransfer.types.includes("task")) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    const draggedTask = document.getElementById("dragged-task");
+                    const placeholder = column.querySelector(".placeholder");
+                    
+                    draggedTask.style.display = "block";
+
+                    if (placeholder) {
+                        placeholder.parentNode.insertBefore(draggedTask, placeholder);
+                        placeholder.remove();
+                    } else {
+                        // Fallback : ajoute à la fin si pas de placeholder
+                        column.querySelector(".tasks").appendChild(draggedTask);
+                    }
+                    updateBoardDataFromDOM();
+                });
+            });
+        }
+
+        // Fonction utilitaire pour trouver où insérer une colonne
+        function getDragAfterColumn(container, x) {
+            const draggableCols = [...container.querySelectorAll('.task-column:not(.dragging-column)')];
+            return draggableCols.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = x - box.left - box.width / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Initialise le drag & drop des colonnes
+        function initColumnDragAndDrop() {
+            const container = document.querySelector(".container");
+            const columns = document.querySelectorAll(".task-column");
+
+            columns.forEach(col => {
+                col.addEventListener("dragstart", (event) => {
+                    event.dataTransfer.setData("column", col.dataset.id);
+                    col.classList.add("dragging-column");
+                });
+                col.addEventListener("dragend", () => {
+                    col.classList.remove("dragging-column");
+                });
+            });
+
+            container.addEventListener("dragover", (event) => {
+                const draggingColumn = document.querySelector(".dragging-column");
+                if (!draggingColumn) return; 
+                event.preventDefault();
+                const afterElement = getDragAfterColumn(container, event.clientX);
+                const addListBtn = document.querySelector(".add-column-btn");
+                
+                // On insère soit avant l'élément trouvé, soit avant le bouton "Ajouter"
+                if (afterElement == null) {
+                    container.insertBefore(draggingColumn, addListBtn);
+                } else {
+                    container.insertBefore(draggingColumn, afterElement);
+                }
+            });
+
+            container.addEventListener("drop", (event) => {
+                const draggingColumn = document.querySelector(".dragging-column");
+                if (draggingColumn) {
+                    event.preventDefault();
+                    updateBoardDataFromDOM();
+                }
+            });
+        }
+
+        // Démarrage de l'application
+        renderBoard(boardData);
     </script>
 </body>
 </html>
