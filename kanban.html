@@ -40,10 +40,71 @@
             transform: rotate(1deg);
         }
 
-        .row {
-            min-height: 50px;
-            border: 1px solid #ccc;
-            padding: 10px;
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .column-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: #172b4d;
+            cursor: pointer;
+        }
+
+        .column-header h2:hover {
+            background-color: rgba(9, 30, 66, 0.08);
+            border-radius: 4px;
+        }
+
+        .tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            list-style: none;
+            padding: 0;
+            margin: 0 0 10px;
+            overflow-y: auto;
+            min-height: 20px; 
+        }
+
+        .task {
+            background: white;
+            border-radius: 6px;
+            padding: 10px 12px;
+            box-shadow: 0 1px 2px rgba(9,30,66,0.15);
+            cursor: grab;
+            border: none;
+            transition: background 0.15s ease;
+            position: relative;
+            padding-right: 70px; /* Espace augmenté pour les 3 boutons */
+        }
+
+        .task:hover {
+            filter: brightness(0.98); /* Légère assombrissement au survol au lieu de changer la couleur fixe */
+        }
+
+        .task:active {
+            cursor: grabbing;
+        }
+
+        /* Styles des boutons d'action */
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background 0.15s, color 0.15s;
+            line-height: 1;
+            position: absolute;
+            top: 8px;
+            opacity: 0; /* Caché par défaut */
             display: flex;
             gap: 10px;
         }
