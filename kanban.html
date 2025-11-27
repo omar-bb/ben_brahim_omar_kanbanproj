@@ -214,13 +214,201 @@
                 column.draggable = true; // Rend la colonne déplaçable
                 column.dataset.id = colId;
 
-        document.addEventListener("dragover", (ev) => {
-            const row = ev.target.closest(".row");
-            if (row) {
-                ev.preventDefault(); // allow drop
-                row.classList.add("placeholder"); // show grey area
+                // En-tête de colonne
+                const headerDiv = document.createElement("div");
+                headerDiv.className = "column-header";
+
+                const h2 = document.createElement("h2");
+                h2.textContent = colData.name;
+                h2.title = "Cliquez pour renommer la liste";
+                h2.onclick = () => editColumn(colId);
+                
+                const deleteColBtn = document.createElement("button");
+                deleteColBtn.className = "col-delete-btn";
+                deleteColBtn.innerHTML = "&times;";
+                deleteColBtn.title = "Supprimer la liste";
+                deleteColBtn.onclick = () => deleteColumn(colId);
+
+                headerDiv.appendChild(h2);
+                headerDiv.appendChild(deleteColBtn);
+                column.appendChild(headerDiv);
+
+                // Liste des tâches (ul)
+                const ul = document.createElement("ul");
+                ul.className = "tasks";
+
+                colData.cards.forEach((cardId) => {
+                    const card = data.cards[cardId];
+                    if (card) {
+                        const li = document.createElement("li");
+                        li.className = "task";
+                        li.draggable = true; // Rend la tâche déplaçable
+                        li.dataset.id = cardId;
+                        
+                        // Appliquer la couleur de fond sauvegardée
+                        li.style.backgroundColor = card.color || '#ffffff';
+
+                        li.innerHTML = `
+                            <strong>${card.task}</strong>
+                            <br>
+                            <small style="color: #555;">Échéance : ${card.due}</small>
+                        `;
+                        
+                        // --- Boutons d'action sur la tâche ---
+
+                        // 1. Sélecteur de couleur
+                        const colorContainer = document.createElement("div");
+                        colorContainer.className = "color-picker-container";
+                        colorContainer.title = "Changer la couleur";
+                        
+                        const colorInput = document.createElement("input");
+                        colorInput.type = "color";
+                        colorInput.className = "color-input";
+                        colorInput.value = card.color || "#ffffff";
+                        colorInput.onchange = (e) => changeTaskColor(cardId, e.target.value);
+                        // Empêcher le drag and drop quand on clique sur le color picker
+                        colorInput.onclick = (e) => e.stopPropagation();
+                        
+                        colorContainer.appendChild(colorInput);
+
+                        // 2. Bouton Éditer (Crayon)
+                        const editTaskBtn = document.createElement("button");
+                        editTaskBtn.className = "action-btn edit-btn";
+                        editTaskBtn.innerHTML = "&#9998;";
+                        editTaskBtn.title = "Éditer la tâche";
+                        editTaskBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            editTask(cardId);
+                        };
+
+                        // 3. Bouton Supprimer (X)
+                        const deleteTaskBtn = document.createElement("button");
+                        deleteTaskBtn.className = "action-btn delete-btn";
+                        deleteTaskBtn.innerHTML = "&times;";
+                        deleteTaskBtn.title = "Supprimer la tâche";
+                        deleteTaskBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            deleteTask(colId, cardId);
+                        };
+
+                        li.appendChild(colorContainer);
+                        li.appendChild(editTaskBtn);
+                        li.appendChild(deleteTaskBtn);
+                        ul.appendChild(li);
+                    }
+                });
+
+                column.appendChild(ul);
+
+                // Bouton "Ajouter une carte"
+                const addCardBtn = document.createElement("button");
+                addCardBtn.className = "add-card-btn";
+                addCardBtn.innerHTML = "<span>+</span> Ajouter une carte";
+                addCardBtn.onclick = () => {
+                    const taskText = prompt("Entrez la description de la tâche :");
+                    if (taskText) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const dateText = prompt("Entrez la date d'échéance (AAAA-MM-JJ) :", today);
+                        
+                        if (dateText === null) return; // Annulé
+                        
+                        // Validation
+                        if (!isValidDate(dateText)) {
+                            alert("Format de date invalide. Utilisez AAAA-MM-JJ.");
+                            return;
+                        }
+
+                        const newCardId = "card-" + Date.now();
+                        
+                        // Création de la nouvelle carte avec couleur par défaut
+                        boardData.cards[newCardId] = { 
+                            task: taskText, 
+                            due: dateText,
+                            color: "#ffffff"
+                        };
+                        boardData.table[colId].cards.push(newCardId);
+                        
+                        saveBoard();
+                        renderBoard(boardData);
+                    }
+                };
+                column.appendChild(addCardBtn);
+
+                container.appendChild(column);
+            });
+
+            // Bouton "Ajouter une autre liste"
+            const addColumnBtn = document.createElement("button");
+            addColumnBtn.className = "add-column-btn";
+            addColumnBtn.textContent = "+ Ajouter une autre liste";
+            addColumnBtn.onclick = () => {
+                const listName = prompt("Entrez le titre de la liste :");
+                if (listName) {
+                    const newColId = "col-" + Date.now();
+                    boardData.table[newColId] = { 
+                        name: listName, 
+                        cards: [] 
+                    };
+                    boardData.columnOrder.push(newColId);
+                    saveBoard();
+                    renderBoard(boardData);
+                }
+            };
+            container.appendChild(addColumnBtn);
+
+            // Ré-initialiser les écouteurs d'événements Drag & Drop
+            initTaskDragAndDrop();
+            initColumnDragAndDrop();
+        }
+
+        // --- Fonctions Drag & Drop (Logique de glisser-déposer) ---
+
+        // Met à jour l'objet boardData en lisant le DOM actuel
+        function updateBoardDataFromDOM() {
+            const container = document.querySelector(".container");
+            const columns = container.querySelectorAll(".task-column");
+            const newColumnOrder = [];
+            
+            columns.forEach(col => {
+                const colId = col.dataset.id;
+                newColumnOrder.push(colId);
+                const tasksUl = col.querySelector(".tasks");
+                const newCardOrder = [];
+                tasksUl.querySelectorAll(".task").forEach(task => {
+                    if (task.dataset.id) newCardOrder.push(task.dataset.id);
+                });
+                if (boardData.table[colId]) boardData.table[colId].cards = newCardOrder;
+            });
+
+            boardData.columnOrder = newColumnOrder;
+            saveBoard();
+        }
+
+        // Crée l'élément fantôme gris (placeholder)
+        function makePlaceholder(draggedTask) {
+            const placeholder = document.createElement("li");
+            placeholder.classList.add("placeholder");
+            placeholder.style.height = `${draggedTask.offsetHeight}px`;
+            return placeholder;
+        }
+
+        // Gère le déplacement du placeholder pour les tâches
+        function moveTaskPlaceholder(event) {
+            if (!event.dataTransfer.types.includes("task")) return;
+            event.preventDefault();
+            
+            const draggedTask = document.getElementById("dragged-task");
+            const column = event.currentTarget;
+            const tasks = column.querySelector(".tasks");
+            if (!tasks) return;
+
+            const existingPlaceholder = column.querySelector(".placeholder");
+            
+            // Optimisation : ne rien faire si on est déjà au bon endroit
+            if (existingPlaceholder) {
+                const rect = existingPlaceholder.getBoundingClientRect();
+                if (event.clientY >= rect.top && event.clientY <= rect.bottom) return;
             }
-        });
 
         document.addEventListener("dragleave", (ev) => {
             const row = ev.target.closest(".row");
