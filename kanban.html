@@ -97,10 +97,78 @@
             },
             "columnOrder": ["0", "1", "2"]
         };
+
+        // --- Chargement des données ---
+        // On essaie de récupérer les données du LocalStorage, sinon on utilise les défauts
+        let boardData = JSON.parse(localStorage.getItem('kanbanBoardData')) || defaultData;
+
+        // Migration : s'assurer que columnOrder existe (pour les anciennes sauvegardes)
+        if (!boardData.columnOrder) {
+            boardData.columnOrder = Object.keys(boardData.table);
+        }
+
+        // --- Fonction de sauvegarde ---
+        function saveBoard() {
+            localStorage.setItem('kanbanBoardData', JSON.stringify(boardData));
+        }
+
+        // --- Validation de la date ---
+        function isValidDate(dateString) {
+            const regex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!regex.test(dateString)) return false;
+            const date = new Date(dateString);
+            // Vérifie si c'est une date valide et si la chaîne correspond à la partie date ISO
+            return date instanceof Date && !isNaN(date) && date.toISOString().slice(0,10) === dateString;
+        }
+
+        // --- Actions (Suppression, Édition) ---
+
+        // Supprimer une colonne (liste)
+        function deleteColumn(colId) {
+            if (confirm("Êtes-vous sûr de vouloir supprimer cette liste et toutes ses tâches ?")) {
+                // Nettoyage des cartes orphelines
+                boardData.table[colId].cards.forEach(cardId => {
+                    delete boardData.cards[cardId];
+                });
+                // Suppression de la colonne
+                delete boardData.table[colId];
+                // Mise à jour de l'ordre
+                boardData.columnOrder = boardData.columnOrder.filter(id => id !== colId);
+                
+                saveBoard();
+                renderBoard(boardData);
             }
         }
 
-        let draggedEl = null;
+        // Supprimer une tâche
+        function deleteTask(colId, taskId) {
+            if (confirm("Supprimer cette tâche ?")) {
+                boardData.table[colId].cards = boardData.table[colId].cards.filter(id => id !== taskId);
+                delete boardData.cards[taskId];
+                saveBoard();
+                renderBoard(boardData);
+            }
+        }
+
+        // Éditer le nom d'une colonne
+        function editColumn(colId) {
+            const currentName = boardData.table[colId].name;
+            const newName = prompt("Entrez le nouveau titre de la liste :", currentName);
+            if (newName && newName.trim() !== "") {
+                boardData.table[colId].name = newName;
+                saveBoard();
+                renderBoard(boardData);
+            }
+        }
+
+        // Éditer une tâche (Nom et Date)
+        function editTask(cardId) {
+            const card = boardData.cards[cardId];
+            const newTask = prompt("Modifier la description :", card.task);
+            if (newTask === null) return; // Annulé
+            
+            const newDue = prompt("Modifier la date d'échéance (AAAA-MM-JJ) :", card.due);
+            if (newDue === null) return; // Annulé
 
         document.addEventListener("dragstart", (ev) => {
             if (ev.target.classList.contains("card")) {
